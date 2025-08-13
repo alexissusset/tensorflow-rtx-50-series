@@ -8,7 +8,8 @@ USER root
 # BUILD TENSORFLOW
 #####################################
 
-RUN apt-get install -y libpq-dev wget software-properties-common lsb-release git python3 python3-venv python3-pip 
+RUN apt update && \
+    apt-get install -y libpq-dev wget software-properties-common lsb-release git python3 python3-venv python3-pip 
 
 RUN add-apt-repository ppa:deadsnakes/ppa -y
 
@@ -27,7 +28,9 @@ RUN wget https://apt.llvm.org/llvm.sh && \
     rm llvm.sh
 
 RUN git clone https://github.com/tensorflow/tensorflow.git
+
 WORKDIR /workspace/tensorflow
+
 RUN git checkout 1f4ee8bcd86b7333e9a98f666d70309fc7c8907a
 
 RUN wget  https://github.com/bazelbuild/bazelisk/releases/download/v1.26.0/bazelisk-linux-amd64 -O /usr/bin/bazel && \
