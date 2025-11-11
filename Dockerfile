@@ -28,7 +28,7 @@ RUN wget https://apt.llvm.org/llvm.sh && \
 
 RUN git clone https://github.com/tensorflow/tensorflow.git
 WORKDIR /workspace/tensorflow
-RUN git checkout 1f4ee8bcd86b7333e9a98f666d70309fc7c8907a
+RUN git checkout r2.20
 
 RUN wget  https://github.com/bazelbuild/bazelisk/releases/download/v1.26.0/bazelisk-linux-amd64 -O /usr/bin/bazel && \
     chmod +x /usr/bin/bazel && \
