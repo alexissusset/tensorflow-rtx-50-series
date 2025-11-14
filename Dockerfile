@@ -8,6 +8,8 @@ USER root
 # BUILD TENSORFLOW
 #####################################
 
+RUN apt update
+
 RUN apt-get install -y libpq-dev wget software-properties-common lsb-release git python3 python3-venv python3-pip 
 
 RUN add-apt-repository ppa:deadsnakes/ppa -y
