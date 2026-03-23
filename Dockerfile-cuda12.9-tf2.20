@@ -32,7 +32,7 @@ RUN wget  https://github.com/bazelbuild/bazelisk/releases/download/v1.26.0/bazel
     chmod +x /usr/bin/bazel && \
     bazel version
 
-COPY tf_configure.bazelrc-cuda12.9-r2.20 .tf_configure.bazelrc
+COPY tf_configure.bazelrc-cuda12.9-tf2.20 .tf_configure.bazelrc
 
 RUN bazel build //tensorflow/tools/pip_package:wheel --repo_env=USE_PYWRAP_RULES=1 --repo_env=WHEEL_NAME=tensorflow --config=cuda --config=cuda_wheel
 
