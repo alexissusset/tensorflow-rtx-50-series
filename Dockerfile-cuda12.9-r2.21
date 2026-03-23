@@ -1,0 +1,85 @@
+ARG VERSION=latest
+
+FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04 AS builder
+
+USER root
+
+#####################################
+# BUILD TENSORFLOW
+#####################################
+
+RUN apt update
+RUN apt-get install -y libpq-dev wget software-properties-common lsb-release git python3 python3-venv python3-pip 
+RUN add-apt-repository ppa:deadsnakes/ppa -y
+
+RUN apt update
+RUN apt install python3.13 python3.13-dev -y
+
+RUN mkdir /workspace
+WORKDIR /workspace
+
+RUN wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    ./llvm.sh 20 all && \
+    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-20 100 && \
+    rm llvm.sh
+
+RUN git clone https://github.com/tensorflow/tensorflow.git
+WORKDIR /workspace/tensorflow
+RUN git checkout r2.21
+
+RUN wget  https://github.com/bazelbuild/bazelisk/releases/download/v1.26.0/bazelisk-linux-amd64 -O /usr/bin/bazel && \
+    chmod +x /usr/bin/bazel && \
+    bazel version
+
+COPY tf_configure.bazelrc-cuda12.9-tf2.21 .tf_configure.bazelrc
+
+RUN bazel build //tensorflow/tools/pip_package:wheel --repo_env=USE_PYWRAP_RULES=1 --repo_env=WHEEL_NAME=tensorflow --config=cuda --config=cuda_wheel
+
+## Build Notebook Server image 
+FROM ubuntu:24.04
+
+RUN mkdir /workspace
+WORKDIR /workspace
+
+# Install dependencies
+RUN apt update && \ 
+    apt install -y wget python3-venv python3-pip
+
+# Install NVIDIA packages
+RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb && \
+    dpkg -i cuda-keyring_1.1-1_all.deb && \
+    rm cuda-keyring_1.1-1_all.deb && \
+    apt update && \
+    apt install -y cuda-toolkit-12 cudnn9-cuda-12
+
+# Install extra Ubuntu Packages
+RUN apt install -y sudo vim curl wget software-properties-common lsb-release git python3 python3-venv python3-pip
+
+# Cleanup 
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Add notebook user and switch to it
+RUN useradd -s /bin/bash notebook && \
+    mkdir /home/notebook && \
+    chown notebook:notebook /home/notebook
+
+# Prepare start script
+COPY src/start.sh /home/notebook/start.sh
+RUN chmod +x /home/notebook/start.sh
+
+# Switch to notebook user
+USER notebook
+
+# Set up Python virtual environment and install built wheel
+WORKDIR /home/notebook/
+COPY --from=builder /workspace/tensorflow/bazel-bin/tensorflow/tools/pip_package/wheel_house/*.whl .
+RUN python3 -m venv ei && \
+    . ei/bin/activate && \
+    pip install *.whl && \
+    pip install seaborn pandas matplotlib opencv-python pillow imutils pydot graphviz librosa notebook && \
+    rm *.whl
+
+# Start Jupyter notebook with container
+ENTRYPOINT ["/home/notebook/start.sh"]
